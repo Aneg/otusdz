@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"errors"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -12,14 +12,14 @@ type mapEl struct {
 	Count int
 }
 
-func Decode(str string) string {
+func Decode(str string) (string, error) {
 	strMap := make([]mapEl, 0, utf8.RuneCount([]byte(str))/2)
 	for _, c := range []rune(str) {
 		if num, err := strconv.Atoi(string(c)); err != nil {
 			strMap = append(strMap, mapEl{Rune: c, Count: 0})
 		} else {
 			if len(strMap) == 0 {
-				log.Fatalf("Некорректная строка")
+				return "", errors.New("некорректная строка")
 			}
 			strMap[len(strMap)-1].Count = strMap[len(strMap)-1].Count*10 + num
 		}
@@ -33,5 +33,5 @@ func Decode(str string) string {
 		}
 	}
 
-	return result.String()
+	return result.String(), nil
 }

@@ -10,5 +10,10 @@ func main() {
 	if _, err := fmt.Scan(&str); err != nil {
 		log.Fatalf("scan error: %s: ", err.Error())
 	}
-	fmt.Printf("%s -> %s\n", str, Decode(str))
+	var result string
+	var err error
+	if result, err = Decode(str); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%s -> %s\n", str, result)
 }

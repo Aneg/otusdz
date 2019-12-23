@@ -20,8 +20,14 @@ func TestDecode(t *testing.T) {
 	}
 
 	for num, test := range tests {
-		if test.output != Decode(test.input) {
+		if r, err := Decode(test.input); err != nil || test.output != r {
 			t.Errorf("Не верный результат тест %d", num)
 		}
+	}
+}
+
+func TestDecodeFail(t *testing.T) {
+	if _, err := Decode("32"); err == nil {
+		t.Error("Отсутствует ошибка")
 	}
 }
