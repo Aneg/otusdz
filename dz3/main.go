@@ -3,6 +3,7 @@ package main
 import (
 	"io/ioutil"
 	"log"
+	"sort"
 	"strings"
 )
 
@@ -21,29 +22,30 @@ func main() {
 		result[str] += 1
 	}
 
-	r := make([]struct {
-		str   string
-		count uint
-	}, len(result))
+	order := make([]Word, 0, len(result))
 
 	for str, countStr := range result {
-		lastKey := 0
-		for i := len(r) - 1; i >= 0; i-- {
-			if r[i].count >= countStr {
-				lastKey = i
-			} else {
-				break
-			}
-		}
-		r := append(r, struct {
-			str   string
-			count uint
-		}{str: str, count: countStr})
+		order = append(order, Word{str: str, count: countStr})
 	}
 
-	log.Println(result)
+	sort.Slice(order, func(i, j int) bool {
+		return order[i].count > order[j].count
+	})
+
+	count := 10
+	if len(order) < 10 {
+		count = len(order)
+	}
+	for key, _ := range order[:count] {
+		log.Printf("%d) %s -> %d", key+1, order[key].str, order[key].count)
+	}
 }
 
 func clearText(text []byte) string {
 	return strings.ReplaceAll(strings.ReplaceAll(strings.ToLower(string(text)), ",", ""), ".", "")
+}
+
+type Word struct {
+	str   string
+	count uint
 }
