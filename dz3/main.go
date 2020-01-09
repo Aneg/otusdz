@@ -14,10 +14,20 @@ func main() {
 		log.Fatal(err)
 	}
 
+	top := CalculateAndSort(text, 10)
+	for key, _ := range top {
+		log.Printf("%d) %s -> %d", key+1, top[key].str, top[key].count)
+	}
+}
+
+func clearText(text []byte) string {
+	return strings.ReplaceAll(strings.ReplaceAll(strings.ToLower(string(text)), ",", ""), ".", "")
+}
+
+func CalculateAndSort(text []byte, topCount int) []Word {
 	s := clearText(text)
 	result := make(map[string]uint)
 	textData := strings.Split(s, " ")
-	log.Println(textData)
 	for _, str := range textData {
 		result[str] += 1
 	}
@@ -32,17 +42,11 @@ func main() {
 		return order[i].count > order[j].count
 	})
 
-	count := 10
-	if len(order) < 10 {
-		count = len(order)
+	if len(order) < topCount {
+		topCount = len(order)
 	}
-	for key, _ := range order[:count] {
-		log.Printf("%d) %s -> %d", key+1, order[key].str, order[key].count)
-	}
-}
 
-func clearText(text []byte) string {
-	return strings.ReplaceAll(strings.ReplaceAll(strings.ToLower(string(text)), ",", ""), ".", "")
+	return order[:topCount]
 }
 
 type Word struct {
