@@ -15,7 +15,7 @@ func main() {
 	}
 
 	top := CalculateAndSort(text, 10)
-	for key, _ := range top {
+	for key := range top {
 		log.Printf("%d) %s -> %d", key+1, top[key].str, top[key].count)
 	}
 }
@@ -47,9 +47,4 @@ func CalculateAndSort(text []byte, topCount int) []Word {
 	}
 
 	return order[:topCount]
-}
-
-type Word struct {
-	str   string
-	count uint
 }
