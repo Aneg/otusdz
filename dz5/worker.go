@@ -1,13 +1,15 @@
 package dz5
 
 import (
+	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
 func Run(tasks []func() error, n, m int) error {
-
+	var err error
 	taskCount := uint32(len(tasks))
 	taskChan := make(chan func() error, taskCount)
 	errChan := make(chan error, taskCount)
@@ -35,9 +37,14 @@ func Run(tasks []func() error, n, m int) error {
 			time.Sleep(500 * time.Millisecond)
 		}
 	}
-	closeChan <- true
+
+	if countErrors >= m {
+		err = errors.New("error limit completed")
+	}
+	close(closeChan)
+	fmt.Println(err)
 	wg.Wait()
-	return nil
+	return err
 }
 
 func runHandler(wg *sync.WaitGroup, taskChan chan func() error, errChan chan error, closeChan chan bool, completedCount *uint32) {
