@@ -2,7 +2,6 @@ package dz5
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -42,7 +41,6 @@ func Run(tasks []func() error, n, m int) error {
 		err = errors.New("error limit completed")
 	}
 	close(closeChan)
-	fmt.Println(err)
 	wg.Wait()
 	return err
 }

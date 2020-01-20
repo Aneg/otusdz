@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func TestRun(t *testing.T) {
+func TestRunError(t *testing.T) {
 	tests := make([]func() error, 0, 20)
 
 	var errorCount int32 = 0
@@ -26,6 +26,28 @@ func TestRun(t *testing.T) {
 	}
 
 	if atomic.LoadInt32(&errorCount) < 10 {
+		t.Errorf("Отработало не верное количество функций")
+	}
+}
+
+func TestRunSuccess(t *testing.T) {
+	tests := make([]func() error, 0, 20)
+
+	var errorCount int32 = 0
+
+	for i := 0; i < 20; i++ {
+		tests = append(tests, func() error {
+			randSecond := rand.Int() % 5 * 1000 * 1000 * 1000
+			time.Sleep(time.Duration(randSecond))
+			atomic.AddInt32(&errorCount, 1)
+			return nil
+		})
+	}
+	if err := Run(tests, 4, 10); err != nil {
+		t.Error(err)
+	}
+
+	if atomic.LoadInt32(&errorCount) != 20 {
 		t.Errorf("Отработало не верное количество функций")
 	}
 }
