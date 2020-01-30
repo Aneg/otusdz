@@ -8,6 +8,9 @@ import (
 )
 
 func Run(tasks []func() error, n, m int) error {
+	if m <= 0 {
+		m = 1
+	}
 	var err error
 	taskCount := uint32(len(tasks))
 	taskChan := make(chan func() error, taskCount)
@@ -21,19 +24,18 @@ func Run(tasks []func() error, n, m int) error {
 		go runHandler(&wg, taskChan, errChan, closeChan, &completedHandlerCount)
 	}
 
-	go func(tasks []func() error) {
-		for i := range tasks {
-			taskChan <- tasks[i]
-		}
-	}(tasks)
+	for i := range tasks {
+		taskChan <- tasks[i]
+	}
 
 	countErrors := 0
+	timer := time.NewTicker(500 * time.Millisecond)
 	for countErrors < m && atomic.LoadUint32(&completedHandlerCount) < taskCount {
 		select {
 		case <-errChan:
 			countErrors++
 		default:
-			time.Sleep(500 * time.Millisecond)
+			<-timer.C
 		}
 	}
 
