@@ -2,12 +2,13 @@ package dz6
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 )
 
 func CopyFile(from *os.File, to *os.File, offset, limit int64) error {
-
+	fmt.Println(limit)
 	fi, err := from.Stat()
 	if err != nil {
 		return err
@@ -17,14 +18,15 @@ func CopyFile(from *os.File, to *os.File, offset, limit int64) error {
 	if fromSize < offset {
 		return errors.New("offset exceeds file size")
 	}
-	if limit == 0 || offset+limit < fromSize {
+	if limit == 0 || offset+limit > fromSize {
 		limit = fromSize - offset
 	}
-	if _, err = from.Seek(offset, io.SeekStart); err != nil {
+	if _, err := from.Seek(offset, io.SeekStart); err != nil {
 		return err
 	}
+	fmt.Println(limit)
 	var N int64
-	N = 1024 * 1024
+	N = 10000
 	b := make([]byte, N)
 	var currentCopy int64
 	var lenRead int
@@ -41,4 +43,6 @@ func CopyFile(from *os.File, to *os.File, offset, limit int64) error {
 		}
 		currentCopy += int64(lenRead)
 	}
+
+	return err
 }
