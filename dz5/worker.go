@@ -29,15 +29,18 @@ func Run(tasks []func() error, n, m int) error {
 	}
 
 	countErrors := 0
-	timer := time.NewTicker(500 * time.Millisecond)
-	for countErrors < m && atomic.LoadUint32(&completedHandlerCount) < taskCount {
+	ticker := time.NewTicker(500 * time.Millisecond)
+	for _ = range ticker.C {
+		if !(countErrors < m && atomic.LoadUint32(&completedHandlerCount) < taskCount) {
+			break
+		}
 		select {
 		case <-errChan:
 			countErrors++
 		default:
-			<-timer.C
 		}
 	}
+	ticker.Stop()
 
 	if countErrors >= m {
 		err = errors.New("error limit completed")
