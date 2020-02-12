@@ -3,8 +3,6 @@ package dz5
 import (
 	"errors"
 	"sync"
-	"sync/atomic"
-	"time"
 )
 
 func Run(tasks []func() error, n, m int) error {
@@ -12,16 +10,16 @@ func Run(tasks []func() error, n, m int) error {
 		m = 1
 	}
 	var err error
-	taskCount := uint32(len(tasks))
+	taskCount := len(tasks)
 	taskChan := make(chan func() error, taskCount)
 	errChan := make(chan error, taskCount)
+	completedTaskChan := make(chan bool, taskCount)
 	closeChan := make(chan bool)
 	wg := sync.WaitGroup{}
 
-	var completedHandlerCount uint32 = 0
 	wg.Add(n)
 	for i := 0; i < n; i++ {
-		go runHandler(&wg, taskChan, errChan, closeChan, &completedHandlerCount)
+		go runHandler(&wg, taskChan, completedTaskChan, errChan, closeChan)
 	}
 
 	for i := range tasks {
@@ -29,46 +27,40 @@ func Run(tasks []func() error, n, m int) error {
 	}
 
 	countErrors := 0
-	ticker := time.NewTicker(500 * time.Millisecond)
-	for _ = range ticker.C {
-		if !(countErrors < m && atomic.LoadUint32(&completedHandlerCount) < taskCount) {
-			break
-		}
+	completedTasks := 0
+	for {
 		select {
 		case <-errChan:
 			countErrors++
-		default:
+		case <-completedTaskChan:
+			completedTasks++
+		}
+
+		if countErrors >= m || completedTasks >= taskCount {
+			break
 		}
 	}
-	ticker.Stop()
-
+	close(closeChan)
 	if countErrors >= m {
 		err = errors.New("error limit completed")
 	}
-	close(closeChan)
 	wg.Wait()
 	return err
 }
 
-func runHandler(wg *sync.WaitGroup, taskChan chan func() error, errChan chan error, closeChan chan bool, completedCount *uint32) {
+func runHandler(wg *sync.WaitGroup, taskChan chan func() error, completedTaskChan chan bool, errChan chan error, closeChan chan bool) {
 	for true {
-		// можно сделать через атомик. Меньше кода будет)
 		select {
 		case <-closeChan:
 			wg.Done()
 			return
-		default:
-		}
-
-		select {
 		case task := <-taskChan:
+			// тут может проскочить лишняя таска. единственный вариант, на мой взгляд, это тики,
+			//но тогда тормозится выполнение задачь при при пустой очереди и при закрытии closeChan
 			if err := task(); err != nil {
 				errChan <- err
 			}
-			atomic.AddUint32(completedCount, 1)
-		default:
-			// TODO: через тики в for
-			time.Sleep(time.Second)
+			completedTaskChan <- true
 		}
 	}
 }
