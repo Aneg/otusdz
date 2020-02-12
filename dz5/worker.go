@@ -40,7 +40,12 @@ func Run(tasks []func() error, n, m int) error {
 			break
 		}
 	}
+
 	close(closeChan)
+	close(taskChan) // что бы исключить выполнение лишней таски
+	close(errChan)
+	close(completedTaskChan)
+
 	if countErrors >= m {
 		err = errors.New("error limit completed")
 	}
@@ -54,9 +59,11 @@ func runHandler(wg *sync.WaitGroup, taskChan chan func() error, completedTaskCha
 		case <-closeChan:
 			wg.Done()
 			return
-		case task := <-taskChan:
-			// тут может проскочить лишняя таска. единственный вариант, на мой взгляд, это тики,
-			//но тогда тормозится выполнение задачь при при пустой очереди и при закрытии closeChan
+		case task, ok := <-taskChan:
+			if !ok {
+				wg.Done()
+				return
+			}
 			if err := task(); err != nil {
 				errChan <- err
 			}
