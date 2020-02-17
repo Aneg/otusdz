@@ -63,6 +63,7 @@ func runHandler(wg *sync.WaitGroup, taskChan chan func() error, completedTaskCha
 			return
 		default:
 		}
+
 		select {
 		case task, ok := <-taskChan:
 			if !ok {
