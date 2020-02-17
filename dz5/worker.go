@@ -41,15 +41,17 @@ func Run(tasks []func() error, n, m int) error {
 		}
 	}
 
+	close(taskChan)
 	close(closeChan)
-	close(taskChan) // что бы исключить выполнение лишней таски
-	close(errChan)
-	close(completedTaskChan)
+	wg.Wait()
 
 	if countErrors >= m {
 		err = errors.New("error limit completed")
 	}
-	wg.Wait()
+
+	close(errChan)
+	close(completedTaskChan)
+
 	return err
 }
 
@@ -59,6 +61,9 @@ func runHandler(wg *sync.WaitGroup, taskChan chan func() error, completedTaskCha
 		case <-closeChan:
 			wg.Done()
 			return
+		default:
+		}
+		select {
 		case task, ok := <-taskChan:
 			if !ok {
 				wg.Done()
