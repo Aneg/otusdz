@@ -23,7 +23,7 @@ func TestCopyFile_with_limit_and_offset(t *testing.T) {
 	}{
 		{
 			limit:  100,
-			offset: 101,
+			offset: 100,
 			first:  49,
 			last:   50,
 			length: 100,
@@ -62,7 +62,7 @@ func TestCopyFile_with_limit_and_offset(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if err := CopyFile(from, to, testCase.offset, testCase.limit); err != nil {
+		if err := CopyFile("from.data", "to.data", testCase.offset, testCase.limit); err != nil {
 			t.Errorf("№ %d: %s", num, err)
 		}
 
@@ -75,10 +75,10 @@ func TestCopyFile_with_limit_and_offset(t *testing.T) {
 		}
 
 		to.Close()
-		_ = os.Remove(toPath)
+		//_ = os.Remove(toPath)
 	}
 
-	_ = os.Remove(fromPath)
+	//_ = os.Remove(fromPath)
 }
 
 func createFile(path string, size int) error {

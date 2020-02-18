@@ -6,7 +6,19 @@ import (
 	"os"
 )
 
-func CopyFile(from *os.File, to *os.File, offset, limit int64) error {
+func CopyFile(fromPath string, toPath string, offset, limit int64) error {
+	from, err := os.OpenFile(fromPath, os.O_RDWR, 0644)
+	if err != nil {
+		return errors.New("другие ошибки, например нет прав")
+	}
+	defer from.Close()
+
+	to, err := os.Create(toPath)
+	if err != nil {
+		return err
+	}
+	defer to.Close()
+
 	fi, err := from.Stat()
 	if err != nil {
 		return err
@@ -23,26 +35,6 @@ func CopyFile(from *os.File, to *os.File, offset, limit int64) error {
 	if _, err := from.Seek(offset, io.SeekStart); err != nil {
 		return err
 	}
-
-	var N int64
-	var currentCopy int64
-	var lenRead int
-
-	N = 1024
-	b := make([]byte, N)
-	for currentCopy = 0; currentCopy < limit && (currentCopy+offset) < fromSize; {
-		// есливдруг конец
-		if currentCopy+N > limit {
-			b = make([]byte, limit-currentCopy)
-		}
-		if lenRead, err = from.ReadAt(b, offset+currentCopy); err != nil {
-			return err
-		}
-		if _, err = to.WriteAt(b, currentCopy); err != nil {
-			return err
-		}
-		currentCopy += int64(lenRead)
-	}
-
+	_, err = io.CopyN(to, from, limit)
 	return err
 }
