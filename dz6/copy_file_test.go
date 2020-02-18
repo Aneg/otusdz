@@ -75,10 +75,10 @@ func TestCopyFile_with_limit_and_offset(t *testing.T) {
 		}
 
 		to.Close()
-		//_ = os.Remove(toPath)
+		_ = os.Remove(toPath)
 	}
 
-	//_ = os.Remove(fromPath)
+	_ = os.Remove(fromPath)
 }
 
 func createFile(path string, size int) error {
