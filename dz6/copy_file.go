@@ -2,6 +2,7 @@ package dz6
 
 import (
 	"errors"
+	"github.com/cheggaaa/pb/v3"
 	"io"
 	"os"
 )
@@ -35,6 +36,10 @@ func CopyFile(fromPath string, toPath string, offset, limit int64) error {
 	if _, err := from.Seek(offset, io.SeekStart); err != nil {
 		return err
 	}
-	_, err = io.CopyN(to, from, limit)
+
+	bar := pb.Full.Start64(limit)
+	barReader := bar.NewProxyReader(from)
+	_, err = io.CopyN(to, barReader, limit)
+	bar.Finish()
 	return err
 }
