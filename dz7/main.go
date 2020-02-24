@@ -4,6 +4,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -20,8 +22,8 @@ func main() {
 	if len(flag.Args()) < 2 {
 		log.Fatalf("не верное количество аргументов")
 	}
-
-	stdout, err := RunCmd(flag.Args()[1:], map[string]string{"USER": "ne_gena"})
+	env, _ := ReadDir(flag.Args()[0])
+	stdout, err := RunCmd(flag.Args()[1:], env)
 	if err != nil {
 		log.Fatal(stdout)
 	}
@@ -30,23 +32,33 @@ func main() {
 
 // сканирует указанный каталог и возвращает все переменные окружения, определенные в нем
 func ReadDir(dir string) (map[string]string, error) {
-	file, err := os.Open(dir)
+	files, err := ioutil.ReadDir(dir)
 	if err != nil {
-		return nil, errors.New("другие ошибки, например нет прав")
+		return nil, err
 	}
-	defer file.Close()
-	//b := make([]byte, 1024*1024)
-	//read, err := io.ReadFull(file, b)
-	//if err != nil {
-	//
-	//}
+	result := make(map[string]string, len(files))
+	for _, f := range files {
+		// todo: хорошо бы  проверять на разделитель между файлами
+		file, err := os.Open(dir + f.Name())
+		if err != nil {
+			return nil, errors.New("другие ошибки, например нет прав")
+		}
 
-	cmd := exec.Command("cd ..")
+		fi, err := file.Stat()
+		if err != nil {
+			return nil, err
+		}
+		fileSize := fi.Size()
 
-	if err := cmd.Run(); err != nil {
-		log.Fatal(err)
+		b := make([]byte, fileSize)
+		_, err = io.ReadFull(file, b)
+		if err != nil && err != io.ErrUnexpectedEOF {
+			return nil, err
+		}
+		result[f.Name()] = string(b)
+		file.Close()
 	}
-	return nil, nil
+	return result, nil
 }
 
 // запускает программу с аргументами (cmd) c переопределнным окружением
