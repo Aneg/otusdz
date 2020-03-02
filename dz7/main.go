@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
 )
 
 //Цель: Реализовать утилиту envdir на Go. Эта утилита позволяет запускать программы получая переменные окружения из определенной директории. См man envdir Пример go-envdir /path/to/evndir command arg1 arg2
@@ -22,7 +23,10 @@ func main() {
 	if len(flag.Args()) < 2 {
 		log.Fatalf("не верное количество аргументов")
 	}
-	env, _ := ReadDir(flag.Args()[0])
+	env, err := ReadDir(flag.Args()[0])
+	if err != nil {
+		log.Fatal(err)
+	}
 	stdout, err := RunCmd(flag.Args()[1:], env)
 	if err != nil {
 		log.Fatal(stdout)
@@ -38,25 +42,31 @@ func ReadDir(dir string) (map[string]string, error) {
 	}
 	result := make(map[string]string, len(files))
 	for _, f := range files {
-		// todo: хорошо бы  проверять на разделитель между файлами
-		file, err := os.Open(dir + f.Name())
-		if err != nil {
-			return nil, errors.New("другие ошибки, например нет прав")
-		}
+		err := func() error {
+			// todo: хорошо бы  проверять на разделитель между файлами
+			file, err := os.Open(path.Join(dir, f.Name()))
+			if err != nil {
+				return errors.New("другие ошибки, например нет прав")
+			}
 
-		fi, err := file.Stat()
+			fi, err := file.Stat()
+			if err != nil {
+				return err
+			}
+			fileSize := fi.Size()
+
+			b := make([]byte, fileSize)
+			_, err = io.ReadFull(file, b)
+			if err != nil && err != io.ErrUnexpectedEOF {
+				return err
+			}
+			result[f.Name()] = string(b)
+			defer file.Close()
+			return nil
+		}()
 		if err != nil {
 			return nil, err
 		}
-		fileSize := fi.Size()
-
-		b := make([]byte, fileSize)
-		_, err = io.ReadFull(file, b)
-		if err != nil && err != io.ErrUnexpectedEOF {
-			return nil, err
-		}
-		result[f.Name()] = string(b)
-		file.Close()
 	}
 	return result, nil
 }
