@@ -9,6 +9,8 @@ import (
 	"log"
 	"net"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -32,7 +34,7 @@ OUTER:
 	log.Printf("Finished readRoutine")
 }
 
-func writeRoutine(ctx context.Context, conn net.Conn) {
+func writeRoutine(ctx context.Context, conn net.Conn, cancelFunc context.CancelFunc) {
 	scanner := bufio.NewScanner(os.Stdin)
 OUTER:
 	for {
@@ -41,6 +43,8 @@ OUTER:
 			break OUTER
 		default:
 			if !scanner.Scan() {
+				fmt.Println("...EOF")
+				cancelFunc()
 				break OUTER
 			}
 			str := scanner.Text()
@@ -64,6 +68,9 @@ func main() {
 		if timeout, err = time.ParseDuration(timeoutStr); err != nil {
 			log.Println(err)
 		}
+	} else {
+		timeoutStr = "10s"
+		timeout = time.Second * 10
 	}
 
 	address, err := getAddress()
@@ -73,25 +80,37 @@ func main() {
 
 	dialer := &net.Dialer{}
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 
+	// Опционально в программу можно передать таймаут на подключение к серверу (через аргумент --timeout, по умолчанию 10s)
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	conn, err := dialer.DialContext(ctx, "tcp", address)
 	if err != nil {
-		log.Fatalf("Cannot connect: %v", err)
+		log.Printf("Cannot connect: %v", err)
+		if timeout != 0 {
+			//из дз: При подключении к несуществующему сервер, программа должна завершаться через timeout.
+			log.Printf("Соединение оборвётся через %s", timeoutStr)
+			<-time.NewTimer(timeout).C
+		}
+		cancel()
+		return
 	}
+
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
 	go readRoutine(ctx, conn, cancel)
-	go writeRoutine(ctx, conn)
+	go writeRoutine(ctx, conn, cancel)
 
-	if timeout != 0 {
-		log.Printf("Соединение оборвётся через %s", timeoutStr)
-		<-time.NewTimer(timeout).C
+	select {
+	case <-ctx.Done():
+		conn.Write([]byte("Bye server!\n"))
+	case <-c:
+		fmt.Println("\r- Ctrl+C pressed in Terminal")
 		cancel()
-		conn.Close()
-	} else {
-		<-ctx.Done()
 	}
-
+	if err := conn.Close(); err != nil {
+		log.Println(err)
+	}
 }
 
 func getAddress() (address string, err error) {
